@@ -45,25 +45,16 @@ def setup_default_environment_variables():
 # Initialize environment variables
 setup_default_environment_variables()
 
-# Set up paths
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-AGENT_DIR = os.path.dirname(BASE_DIR)  # Parent directory containing the agent
-
-# Set up DB path for sessions
-SESSION_DB_URL = f"sqlite:///{os.path.join(BASE_DIR, 'autoyou_sessions.db')}"
-
 # Create session service configuration
 session_db_kwargs = {
-    "url": SESSION_DB_URL,
     "echo": False,
-    "pool_pre_ping": True,
 }
 
 # Create the FastAPI app using ADK's helper
 app: FastAPI = get_fast_api_app(
     agents_dir=AGENT_DIR,
     session_db_kwargs=session_db_kwargs,
-    allow_origins=["*"],  # In production, restrict this
+    allow_origins=["*"],
     web=True,  # Enable the ADK Web UI
 )
 
