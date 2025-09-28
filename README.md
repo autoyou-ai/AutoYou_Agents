@@ -79,6 +79,10 @@ The **Notes Agent** is a specialized sub-agent that provides comprehensive note-
 
 You can run the AutoYou AI Agent as a web service with full ADK integration.
 
+### Run OLLAMA
+
+Run OLLAMA. The Google ADK might get stuck or fallback to GEMINI model (GOOGLE_API) if not.
+
 ### Start the Server
 
 Execute the following command from the project root:
@@ -99,12 +103,22 @@ The server will automatically:
 - Enable the ADK Web UI for interactive agent communication
 - Start the FastAPI server with CORS support
 
+## Open WebUI in Browser
+
+Once the server is running, open your web browser and navigate to:
+
+```
+http://localhost:8000/dev-ui/app=AutoYou_Agents
+```
+
+Replace `localhost` and `8000` with your specified host and port if different.
+
+
 ### API Endpoints
 
 The server provides the following endpoints:
 
 *   `GET /health`: Health check endpoint returning service status
-*   `POST /`: Main ADK-compatible endpoint for agent interactions
 *   **ADK Web UI**: Interactive web interface for conversing with the agent (enabled by default)
 
 ## Configuration
