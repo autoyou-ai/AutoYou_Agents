@@ -1,0 +1,18 @@
+# Core Google ADK and AI dependencies
+google-adk>=1.15.1
+google-genai>=1.4.1
+
+# Web framework and server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Model integration and AI services
+litellm>=1.76.2
+ollama>=0.6.0
+
+# Configuration and environment
+python-dotenv>=1.0.0
+
+# Core utilities
+requests>=2.31.0
+pydantic>=2.5.0
