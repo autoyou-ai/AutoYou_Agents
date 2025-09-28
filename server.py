@@ -45,6 +45,12 @@ def setup_default_environment_variables():
 # Initialize environment variables
 setup_default_environment_variables()
 
+# Set up paths
+DIRNAME = os.path.dirname(__file__)
+AGENT_NAME = os.path.basename(DIRNAME)  # Extract only "AutoYou_Agents"
+AGENT_DIR = os.path.abspath(DIRNAME)
+BASE_DIR = os.path.dirname(AGENT_DIR)  # Parent directory containing the agent
+
 # Create session service configuration
 session_db_kwargs = {
     "echo": False,
@@ -52,9 +58,8 @@ session_db_kwargs = {
 
 # Create the FastAPI app using ADK's helper
 app: FastAPI = get_fast_api_app(
-    agents_dir=AGENT_DIR,
-    session_db_kwargs=session_db_kwargs,
-    allow_origins=["*"],
+    agents_dir=BASE_DIR,
+    allow_origins=["*"],  # In production, restrict this
     web=True,  # Enable the ADK Web UI
 )
 
@@ -75,8 +80,7 @@ if __name__ == "__main__":
 
     print("Starting AutoYou Notes Agent FastAPI server...")
     print(f"Agent directory: {AGENT_DIR}")
-    print(f"Session database: {SESSION_DB_URL}")
-    print(f"Access the web UI at: http://localhost:{args.port}")
+    print(f"Access the web UI at: http://localhost:{args.port}/dev-ui/?app={AGENT_NAME}")
 
     uvicorn.run(
         app,
