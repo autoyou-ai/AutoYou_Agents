@@ -94,7 +94,7 @@ python server.py
 To specify a different host or port:
 
 ```bash
-python server.py --host 0.0.0.0 --port 8000
+python server.py --host 0.0.0.0 --port 8001
 ```
 
 The server will automatically:
@@ -108,10 +108,10 @@ The server will automatically:
 Once the server is running, open your web browser and navigate to:
 
 ```
-http://localhost:8000/dev-ui/app=AutoYou_Agents
+http://localhost:8001/dev-ui/app=AutoYou_Agents
 ```
 
-Replace `localhost` and `8000` with your specified host and port if different.
+Replace `localhost` and `8001` with your specified host and port if different.
 
 
 ### API Endpoints
@@ -218,7 +218,7 @@ Below are simple examples to interact with the REST API.
 
 Curl:
 ```bash
-curl -X POST http://localhost:8000/api/chat \
+curl -X POST http://localhost:8001/api/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Hello AutoYou!",
@@ -237,7 +237,7 @@ $body = @{
   metadata = @{ client = "powershell" } 
 } | ConvertTo-Json
 
-Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/chat -ContentType 'application/json' -Body $body
+Invoke-RestMethod -Method Post -Uri http://localhost:8001/api/chat -ContentType 'application/json' -Body $body
 ```
 
 Response (example):
@@ -260,13 +260,13 @@ Response (example):
 ### Retrieve session info
 
 ```bash
-curl http://localhost:8000/api/sessions/default_user/demo-session-1
+curl http://localhost:8001/api/sessions/default_user/demo-session-1
 ```
 
 ### Check API status
 
 ```bash
-curl http://localhost:8000/api/status
+curl http://localhost:8001/api/status
 ```
 
 ## API Models
