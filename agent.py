@@ -6,7 +6,14 @@
 # You may obtain a copy of the License at
 #
 #     https://opensource.org/licenses/MIT
+"""
+AutoYou Notes Agent.
 
+This module implements the AutoYou Notes Agent, which uses a combination of
+Ollama for local language processing and Google's Gemini API for advanced
+natural language understanding. The agent is designed to handle note-taking,
+organization, and retrieval tasks.
+"""
 # Standard library imports
 import logging
 

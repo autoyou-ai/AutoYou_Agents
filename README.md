@@ -118,8 +118,12 @@ Replace `localhost` and `8000` with your specified host and port if different.
 
 The server provides the following endpoints:
 
-*   `GET /health`: Health check endpoint returning service status
-*   **ADK Web UI**: Interactive web interface for conversing with the agent (enabled by default)
+*   `POST /api/chat`: Send a message to the agent and receive a structured response. Supports session continuity with `session_id`, optional `user_id`, `context`, and `metadata`.
+*   `GET /api/sessions/{user_id}/{session_id}`: Retrieve session information and basic stats for the given user/session.
+*   `GET /api/status`: Get current API status, agent name, version, and message/session counts.
+*   `GET /api/docs`: Lightweight API documentation with a usage example.
+*   `GET /health`: Health check endpoint returning service status.
+*   **ADK Web UI**: Interactive web interface for conversing with the agent (enabled by default) at `/dev-ui/app=AutoYou_Agents`.
 
 ## Configuration
 
@@ -165,6 +169,25 @@ A test script for the notes agent is provided:
 python notes_agent/test_agent.py
 ```
 
+## Privacy
+
+AutoYou is the only Private, Secure, Locally Run, OLLAMA-compatible AI agent that is 100% Forever Free and operates fully with no data collection, no user behavior monitoring, and no requirement for API keys, accounts, authentication, or sign-in.
+
+### Platform Highlights
+*   Private, Secure, Locally Run: Operates entirely on your machine by default with no external data transmission or tracking. No data collection and no user behavior monitoring.
+*   100% Free: No API keys, accounts, authentication, or sign-in required for core features.
+*   Ollama-Compatible: Works seamlessly with local Ollama models and automatically detects availability.
+*   Optional Gemini Fallback: If `USE_GOOGLE_API=1` and a valid `GOOGLE_API_KEY` are provided, cloud-based Gemini can be used as a fallback.
+*   Session Persistence: SQLite-backed sessions with `message_count` tracking, plus response metadata including `processing_time_ms` for each REST API Chat request.
+*   REST Server + ADK Web UI: Clean FastAPI endpoints and built-in ADK Dev UI at `/dev-ui/app=AutoYou_Agents`.
+*   Extensible Multi-Agent Architecture: Easily add new tools and specialized sub-agents.
+*   Cross-Platform, Offline-First: Designed to run locally on your machine with minimal setup.
+
+- By default, AutoYou runs locally using Ollama with no external data transmission.
+- Session data and logs are stored locally, and you control your data at all times.
+- If you explicitly enable `USE_GOOGLE_API=1` and provide a valid API key, cloud requests may be made to Google Gemini; otherwise, no network calls are made for model inference.
+- CORS is enabled for development convenience; restrict origins in sensitive, production deployments.
+
 ## Contributing
 
 Contributions are welcome! Please follow these steps:
@@ -173,6 +196,8 @@ Contributions are welcome! Please follow these steps:
 2.  Create a new feature branch.
 3.  Commit your changes.
 4.  Submit a pull request.
+
+For questions, ideas, or collaboration, reach out at: autoyou [dot] ai [at] gmail [dot] com
 
 ## License
 
@@ -183,3 +208,98 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 *   Google AI Development Kit (ADK)
 *   Ollama for local LLM support
 *   The open-source community
+*   You ! Yes, that's right - you. AutoYou is the only AI App you'll ever need, built by You, for You.
+
+## Quick API Examples
+
+Below are simple examples to interact with the REST API.
+
+### Send a chat message
+
+Curl:
+```bash
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Hello AutoYou!",
+    "user_id": "default_user",
+    "session_id": "demo-session-1",
+    "metadata": {"client": "curl"}
+  }'
+```
+
+PowerShell:
+```powershell
+$body = @{ 
+  message = "Hello AutoYou!"; 
+  user_id = "default_user"; 
+  session_id = "demo-session-1"; 
+  metadata = @{ client = "powershell" } 
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/chat -ContentType 'application/json' -Body $body
+```
+
+Response (example):
+```json
+{
+  "response": "\n\nHello! I'm AutoYou, your personal AI assistant. How can I help you today? 😊",
+  "session_id": "demo-session-1",
+  "message_id": "<uuid>",
+  "timestamp": "<iso-datetime>",
+  "agent_name": "AutoYou AI Agent",
+  "metadata": {
+    "session_message_count": 1,
+    "processing_time_ms": 42,
+    "agent_version": "1.0.0",
+    "client": "curl"
+  }
+}
+```
+
+### Retrieve session info
+
+```bash
+curl http://localhost:8000/api/sessions/default_user/demo-session-1
+```
+
+### Check API status
+
+```bash
+curl http://localhost:8000/api/status
+```
+
+## API Models
+
+The server uses the following JSON models:
+
+- ChatRequest:
+  - `message` (string, required)
+  - `session_id` (string, optional)
+  - `user_id` (string, optional, default `AutoYou-client`)
+  - `context` (array of objects, optional)
+  - `metadata` (object, optional)
+
+- ChatResponse:
+  - `response` (string)
+  - `session_id` (string)
+  - `message_id` (string)
+  - `timestamp` (ISO datetime)
+  - `agent_name` (string)
+  - `metadata` (object) including:
+    - `session_message_count` (number)
+    - `processing_time_ms` (number)
+    - `agent_version` (string)
+
+- SessionInfo:
+  - `session_id` (string)
+  - `user_id` (string)
+  - `created_at` (ISO datetime)
+  - `last_activity` (ISO datetime)
+  - `message_count` (number)
+
+- APIStatus:
+  - `status` (string)
+  - `version` (string)
+  - `agent_name` (string)
+  - `timestamp` (ISO datetime)

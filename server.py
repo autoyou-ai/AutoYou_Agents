@@ -63,22 +63,100 @@ app: FastAPI = get_fast_api_app(
     web=True,  # Enable the ADK Web UI
 )
 
+# Import REST API components
+from rest_api import (
+    ChatRequest, ChatResponse, SessionInfo, APIStatus,
+    process_chat_message, get_session_info, get_api_status
+)
+
 # Add custom health check endpoint
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""
     return {"status": "healthy", "service": "AutoYou AI Agent"}
 
+# REST API Endpoints for external chat applications
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat_endpoint(chat_request: ChatRequest):
+    """
+    Main chat endpoint for external applications.
+    
+    Send a message to the AutoYou AI Agent and receive a response.
+    Supports session management for conversation continuity.
+    """
+    return await process_chat_message(chat_request)
+
+@app.get("/api/sessions/{user_id}/{session_id}", response_model=SessionInfo)
+async def get_session_endpoint(user_id: str, session_id: str):
+    """
+    Get information about a specific session.
+    """
+    return await get_session_info(user_id, session_id)
+
+@app.get("/api/status", response_model=APIStatus)
+async def api_status_endpoint():
+    """
+    Get the current API status and agent information.
+    """
+    return await get_api_status()
+
+@app.get("/api/docs")
+async def api_documentation():
+    """
+    API documentation endpoint with usage examples.
+    """
+    return {
+        "title": "AutoYou AI Agent REST API",
+        "version": "1.0.0",
+        "description": "REST API for interacting with AutoYou AI Agent",
+        "endpoints": {
+            "/api/chat": {
+                "method": "POST",
+                "description": "Send a message to the agent and receive a response",
+                "example_request": {
+                    "message": "Hello, how can you help me?",
+                    "session_id": "optional-session-id",
+                    "user_id": "user123",
+                    "context": [],
+                    "metadata": {}
+                },
+                "example_response": {
+                    "response": "Hello! I'm AutoYou, your AI assistant...",
+                    "session_id": "generated-or-provided-session-id",
+                    "message_id": "unique-message-id",
+                    "timestamp": "2025-01-27T10:30:00Z",
+                    "agent_name": "AutoYou AI Agent",
+                    "metadata": {}
+                }
+            },
+            "/api/sessions/{user_id}/{session_id}": {
+                "method": "GET",
+                "description": "Get information about a specific session"
+            },
+            "/api/status": {
+                "method": "GET", 
+                "description": "Get API status and agent information"
+            }
+        },
+        "usage_notes": [
+            "All endpoints return JSON responses",
+            "Session IDs are automatically generated if not provided",
+            "Context is maintained automatically within sessions",
+            "The agent supports multi-agent routing for specialized tasks"
+        ]
+    }
+
 if __name__ == "__main__":
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="AutoYou Notes Agent Server")
+    parser = argparse.ArgumentParser(description="AutoYou AI Agent Server")
     parser.add_argument("--port", type=int, default=8000,
                         help="Port to run the server on (default: 8000)")
     parser.add_argument("--host", type=str, default="0.0.0.0",
                         help="Host to bind the server to (default: 0.0.0.0)")
     args = parser.parse_args()
 
-    print("Starting AutoYou Notes Agent FastAPI server...")
+    print("Starting AutoYou AI Agent FastAPI server...")
     print(f"Agent directory: {AGENT_DIR}")
     print(f"Access the web UI at: http://localhost:{args.port}/dev-ui/?app={AGENT_NAME}")
 
