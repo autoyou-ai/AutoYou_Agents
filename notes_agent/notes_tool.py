@@ -13,7 +13,7 @@ import logging
 import os
 import re
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from google.adk.tools import FunctionTool
 
 logger = logging.getLogger(__name__)
@@ -407,8 +407,60 @@ class NotesTool:
             logger.error(f"Failed to delete note {note_id}: {e}")
             return False
     
-    def list_notes(self, category: Optional[str] = None, limit: int = None) -> List[Dict[str, Any]]:
-        """List notes, optionally filtered by category."""
+    def _validate_date_input(self, date_filter: Optional[str] = None) -> Optional[str]:
+        """Validate and normalize date input for filtering."""
+        if date_filter is None:
+            return None
+            
+        if not isinstance(date_filter, str):
+            raise ValueError("Date filter must be a string")
+            
+        # Handle common date formats and keywords
+        date_filter = date_filter.lower().strip()
+        
+        if date_filter in ['today', 'now']:
+            return datetime.now().date().isoformat()
+        elif date_filter == 'yesterday':
+            yesterday = datetime.now().date() - timedelta(days=1)
+            return yesterday.isoformat()
+        elif date_filter in ['this week', 'week']:
+            # Return start of current week (Monday)
+            today = datetime.now().date()
+            days_since_monday = today.weekday()
+            week_start = today - timedelta(days=days_since_monday)
+            return week_start.isoformat()
+        elif date_filter in ['this month', 'month']:
+            # Return start of current month
+            today = datetime.now().date()
+            month_start = today.replace(day=1)
+            return month_start.isoformat()
+        else:
+            # Try to parse as ISO date (YYYY-MM-DD)
+            try:
+                parsed_date = datetime.fromisoformat(date_filter).date()
+                return parsed_date.isoformat()
+            except ValueError:
+                # Try other common formats
+                for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d']:
+                    try:
+                        parsed_date = datetime.strptime(date_filter, fmt).date()
+                        return parsed_date.isoformat()
+                    except ValueError:
+                        continue
+                raise ValueError(f"Invalid date format: {date_filter}. Use YYYY-MM-DD, 'today', 'yesterday', 'this week', or 'this month'")
+
+    def list_notes(self, category: Optional[str] = None, limit: int = None, 
+                   created_after: Optional[str] = None, created_before: Optional[str] = None,
+                   created_on: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List notes, optionally filtered by category and/or date.
+        
+        Args:
+            category: Filter by category (optional)
+            limit: Maximum number of results (optional)
+            created_after: Show notes created after this date (YYYY-MM-DD or keywords like 'today')
+            created_before: Show notes created before this date (YYYY-MM-DD or keywords like 'today')
+            created_on: Show notes created on this specific date (YYYY-MM-DD or keywords like 'today')
+        """
         try:
             # Validate inputs
             if category is not None:
@@ -419,21 +471,45 @@ class NotesTool:
             elif not isinstance(limit, int) or limit <= 0 or limit > self.SEARCH_LIMIT_MAX:
                 limit = self.DEFAULT_LIST_LIMIT  # Default safe limit
             
+            # Validate and normalize date inputs
+            created_after_date = self._validate_date_input(created_after)
+            created_before_date = self._validate_date_input(created_before)
+            created_on_date = self._validate_date_input(created_on)
+            
             conn = self._get_db_connection()
             cursor = conn.cursor()
             
+            # Build dynamic query
+            where_conditions = ["archived = FALSE"]
+            params = []
+            
             if category:
-                cursor.execute("""
-                    SELECT id, title, content, tags, category, created_at, updated_at
-                    FROM notes WHERE category = ? AND archived = FALSE
-                    ORDER BY updated_at DESC LIMIT ?
-                """, (category, limit))
+                where_conditions.append("category = ?")
+                params.append(category)
+            
+            if created_on_date:
+                # For "created on" we want the entire day
+                where_conditions.append("DATE(created_at) = ?")
+                params.append(created_on_date)
             else:
-                cursor.execute("""
-                    SELECT id, title, content, tags, category, created_at, updated_at
-                    FROM notes WHERE archived = FALSE
-                    ORDER BY updated_at DESC LIMIT ?
-                """, (limit,))
+                if created_after_date:
+                    where_conditions.append("DATE(created_at) >= ?")
+                    params.append(created_after_date)
+                
+                if created_before_date:
+                    where_conditions.append("DATE(created_at) <= ?")
+                    params.append(created_before_date)
+            
+            where_clause = " AND ".join(where_conditions)
+            params.append(limit)
+            
+            query = f"""
+                SELECT id, title, content, tags, category, created_at, updated_at
+                FROM notes WHERE {where_clause}
+                ORDER BY updated_at DESC LIMIT ?
+            """
+            
+            cursor.execute(query, params)
             
             results = []
             for row in cursor.fetchall():
@@ -461,7 +537,8 @@ class NotesTool:
         def notes_function(action: str, title: Optional[str] = None, content: Optional[str] = None, 
                           tags: Optional[List[str]] = None, category: Optional[str] = None,
                           query: Optional[str] = None, note_id: Optional[int] = None, 
-                          limit: Optional[int] = None) -> str:
+                          limit: Optional[int] = None, created_after: Optional[str] = None,
+                          created_before: Optional[str] = None, created_on: Optional[str] = None) -> str:
             """Handle notes operations with comprehensive input validation.
             
             Args:
@@ -473,6 +550,9 @@ class NotesTool:
                 query: Search query for finding notes
                 note_id: Note ID for get, update, or delete operations
                 limit: Maximum number of results to return
+                created_after: Filter notes created after this date (YYYY-MM-DD or 'today', 'yesterday', etc.)
+                created_before: Filter notes created before this date (YYYY-MM-DD or 'today', 'yesterday', etc.)
+                created_on: Filter notes created on this specific date (YYYY-MM-DD or 'today', 'yesterday', etc.)
             
             Returns:
                 String result of the operation
@@ -497,46 +577,92 @@ class NotesTool:
                     if not content or not content.strip():
                         return "Error: Content is required to create a note."
                     
-                    result = self.create_note(title.strip(), content.strip(), tags, category)
-                    if result.get('success'):
-                        return f"Note created successfully with ID: {result['note_id']}"
+                    result = self.create_note(title, content, tags, category)
+                    if result['success']:
+                        return f"✅ Note created successfully!\n📝 Title: {result['title']}\n🏷️ Category: {result['category']}\n🆔 ID: {result['note_id']}"
                     else:
-                        return f"Error creating note: {result.get('error', 'Unknown error')}"
+                        return f"❌ Failed to create note: {result['error']}"
                 
                 elif action == "search":
                     if not query or not query.strip():
                         return "Error: Search query is required."
                     
-                    results = self.search_notes(query.strip(), limit)
-                    if results:
-                        return f"Found {len(results)} notes:\n" + "\n".join([
-                            f"ID: {note['id']}, Title: {note['title']}, Category: {note['category']}"
-                            for note in results
-                        ])
-                    else:
-                        return "No notes found matching your search."
+                    results = self.search_notes(query, limit)
+                    if not results:
+                        return f"🔍 No notes found matching '{query}'"
+                    
+                    response = f"🔍 Found {len(results)} note(s) matching '{query}':\n\n"
+                    for note in results:
+                        tags_str = f" 🏷️ {', '.join(note['tags'])}" if note['tags'] else ""
+                        response += f"📝 **{note['title']}** (ID: {note['id']})\n"
+                        response += f"   📂 Category: {note['category']}{tags_str}\n"
+                        response += f"   📄 Content: {note['content'][:100]}{'...' if len(note['content']) > 100 else ''}\n"
+                        response += f"   📅 Created: {note['created_at']}\n\n"
+                    
+                    return response.strip()
                 
                 elif action == "get":
                     if note_id is None:
-                        return "Error: Note ID is required."
+                        return "Error: Note ID is required to get a note."
                     
                     note = self.get_note(note_id)
-                    if note:
-                        return f"Title: {note['title']}\nContent: {note['content']}\nTags: {', '.join(note['tags'])}\nCategory: {note['category']}"
-                    else:
-                        return "Note not found."
+                    if not note:
+                        return f"❌ Note with ID {note_id} not found."
+                    
+                    tags_str = f"\n🏷️ Tags: {', '.join(note['tags'])}" if note['tags'] else ""
+                    archived_str = " (ARCHIVED)" if note.get('archived') else ""
+                    
+                    return f"📝 **{note['title']}**{archived_str}\n" \
+                           f"🆔 ID: {note['id']}\n" \
+                           f"📂 Category: {note['category']}{tags_str}\n" \
+                           f"📄 Content:\n{note['content']}\n" \
+                           f"📅 Created: {note['created_at']}\n" \
+                           f"🔄 Updated: {note['updated_at']}"
                 
                 elif action == "list":
-                    list_category = None if category == "general" else category
-                    notes = self.list_notes(list_category, limit)
-                    if notes:
-                        return f"Found {len(notes)} notes:\n" + "\n".join([
-                            f"ID: {note['id']}, Title: {note['title']}, Category: {note['category']}"
-                            for note in notes
-                        ])
-                    else:
-                        return "No notes found."
-                
+                    results = self.list_notes(category, limit, created_after, created_before, created_on)
+                    if not results:
+                        filter_desc = []
+                        if category:
+                            filter_desc.append(f"category '{category}'")
+                        if created_on:
+                            filter_desc.append(f"created on {created_on}")
+                        elif created_after or created_before:
+                            if created_after and created_before:
+                                filter_desc.append(f"created between {created_after} and {created_before}")
+                            elif created_after:
+                                filter_desc.append(f"created after {created_after}")
+                            elif created_before:
+                                filter_desc.append(f"created before {created_before}")
+                        
+                        filter_text = " with " + " and ".join(filter_desc) if filter_desc else ""
+                        return f"📋 No notes found{filter_text}."
+                    
+                    # Build filter description for response
+                    filter_desc = []
+                    if category:
+                        filter_desc.append(f"category '{category}'")
+                    if created_on:
+                        filter_desc.append(f"created on {created_on}")
+                    elif created_after or created_before:
+                        if created_after and created_before:
+                            filter_desc.append(f"created between {created_after} and {created_before}")
+                        elif created_after:
+                            filter_desc.append(f"created after {created_after}")
+                        elif created_before:
+                            filter_desc.append(f"created before {created_before}")
+                    
+                    filter_text = " (" + ", ".join(filter_desc) + ")" if filter_desc else ""
+                    
+                    response = f"📋 Your notes{filter_text}:\n\n"
+                    for i, note in enumerate(results, 1):
+                        tags_str = f" 🏷️ {', '.join(note['tags'])}" if note['tags'] else ""
+                        response += f"{i}. **{note['title']}** ({note['category']}){tags_str}\n"
+                        response += f"   📄 Content: {note['content']}\n"
+                        response += f"   📅 Created: {note['created_at']}\n\n"
+                    
+                    return response.strip()
+
                 elif action == "update":
                     if note_id is None:
                         return "Error: Note ID is required."

@@ -30,7 +30,7 @@ class OllamaService:
         self.ollama_available = False
         # Get default model from environment variable or use fallback
         default_model_env = os.getenv('OLLAMA_MODEL', 'qwen3:4b')
-        # Remove ollama_chat/ or ollama/ prefix if present
+        # Remove ollama_chat/ or ollama/ or openapi/ prefix if present
         if '/' in default_model_env:
             self.default_model = default_model_env.split('/', 1)[1]
         else:

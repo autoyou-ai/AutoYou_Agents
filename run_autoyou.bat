@@ -75,7 +75,7 @@ echo [5/5] Starting AutoYou AI Agent server...
 echo You can stop the server at any time with Ctrl+C.
 echo.
 
-python server.py --host 0.0.0.0 --port 8001
+python server.py --host 0.0.0.0 --port 8081
 set "EXITCODE=%ERRORLEVEL%"
 
 if not "%EXITCODE%"=="0" (

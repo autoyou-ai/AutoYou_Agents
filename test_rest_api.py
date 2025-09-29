@@ -28,7 +28,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # API Configuration
-API_BASE_URL = "http://localhost:8001"
+API_BASE_URL = "http://localhost:8081"
 API_ENDPOINTS = {
     "chat": f"{API_BASE_URL}/api/chat",
     "status": f"{API_BASE_URL}/api/status",

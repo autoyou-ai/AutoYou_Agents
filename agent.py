@@ -16,6 +16,39 @@ organization, and retrieval tasks.
 """
 # Standard library imports
 import logging
+import litellm
+import asyncio
+
+# Monkey-patch litellm to handle Ollama's message format
+_original_acompletion = litellm.acompletion
+
+def _flatten_message_content(messages):
+    """
+    Flattens the 'content' of messages if it is a list of parts,
+    which is how ADK represents complex content, into a single string
+    that Ollama expects.
+    """
+    for message in messages:
+        if isinstance(message.get("content"), list):
+            new_content = " ".join(
+                part["text"]
+                for part in message["content"]
+                if isinstance(part, dict) and "text" in part
+            )
+            message["content"] = new_content
+    return messages
+
+async def _patched_acompletion(*args, **kwargs):
+    """
+    Patched version of litellm.acompletion that flattens message content
+    before passing it to the original function.
+    """
+    if "messages" in kwargs:
+        kwargs["messages"] = _flatten_message_content(kwargs["messages"])
+    return await _original_acompletion(*args, **kwargs)
+
+litellm.acompletion = _patched_acompletion
+
 
 # Third-party imports
 from google.adk.agents import Agent

@@ -2,23 +2,11 @@
 
 **AutoYou AI Agent** is an intelligent, multi-agent AI assistant built on Google's AI Development Kit (ADK). It serves as a personal AI assistant with specialized capabilities, featuring a modular architecture that combines general conversation abilities with specialized sub-agents for specific tasks. The primary implementation showcases a sophisticated notes management system powered by local Ollama models with cloud-based Gemini fallback.
 
-## Core Agent System
-
-The **AutoYou AI Agent** is designed as a conversational AI assistant that can:
-- Handle general conversations and provide assistance on various topics
-- Intelligently route specialized requests to appropriate sub-agents
-- Maintain context across conversations and agent interactions
-- Operate with both local (Ollama) and cloud-based (Google Gemini) language models
-
-## Notes Agent Implementation
-
-The **Notes Agent** is a specialized sub-agent that provides comprehensive note-taking and management capabilities:
-- Natural language-based note creation, search, and organization
-- Full-text search with SQLite FTS5 for fast content retrieval
-- Persistent storage with comprehensive data validation and security
-- Category-based organization and tagging system
-
 ## Key Features
+*   Private, Secure, Locally Run: Operates entirely on your machine by default with no external data transmission or tracking. No data collection and no user behavior monitoring.
+*   100% Free: No API keys, accounts, authentication, or sign-in required for core features of server. Only API keys are needed for integrations with messaging partners (e.g., Telegram), call servers (STUN/TURN) (e.g., Open Relay), public web proxy services (e.g., Tunnelmole)
+*   Ollama-Compatible: Works seamlessly with local Ollama models (e.g., qwen3:4b) and automatically detects availability.
+*   Optional Gemini Fallback: If `USE_GOOGLE_API=1` and a valid `GOOGLE_API_KEY` are provided, cloud-based Gemini models (e.g., gemini-2.5-flash) can be used as a fallback.
 
 ### Core AI Agent
 *   **Multi-Agent Architecture**: Intelligent routing between general conversation and specialized sub-agents
@@ -47,7 +35,11 @@ The **Notes Agent** is a specialized sub-agent that provides comprehensive note-
 ├── ollama_service.py    # Service for Ollama model discovery and management
 ├── prompt.py            # Root agent prompt configuration (name, description, instructions)
 ├── requirements.txt     # Production dependencies
+├── rest_api.py          # REST API endpoints (chat, sessions, status)
+├── session_utils.py     # Session management utilities and helpers
 ├── server.py            # FastAPI server with ADK integration
+├── test_rest_api.py     # Test script for REST API endpoints
+├── run_autoyou.bat      # Windows launcher script
 └── notes_agent/
     ├── agent.py         # Notes agent implementation with CRUD operations
     ├── notes_tool.py    # Comprehensive notes tool with SQLite FTS5
@@ -173,12 +165,10 @@ python notes_agent/test_agent.py
 
 AutoYou is the only Private, Secure, Locally Run, OLLAMA-compatible AI agent that is 100% Forever Free and operates fully with no data collection, no user behavior monitoring, and no requirement for API keys, accounts, authentication, or sign-in.
 
-### Platform Highlights
-*   Private, Secure, Locally Run: Operates entirely on your machine by default with no external data transmission or tracking. No data collection and no user behavior monitoring.
-*   100% Free: No API keys, accounts, authentication, or sign-in required for core features.
-*   Ollama-Compatible: Works seamlessly with local Ollama models and automatically detects availability.
-*   Optional Gemini Fallback: If `USE_GOOGLE_API=1` and a valid `GOOGLE_API_KEY` are provided, cloud-based Gemini can be used as a fallback.
-*   Session Persistence: SQLite-backed sessions with `message_count` tracking, plus response metadata including `processing_time_ms` for each REST API Chat request.
+### Platform Features
+
+*   Sessions Logging: SQLite-backed sessions with `message_count` tracking, plus response metadata including `processing_time_ms` for each REST API Chat request.
+*   Notes Management: SQLite-backed notes database with full-text search, category organization, and tagging.
 *   REST Server + ADK Web UI: Clean FastAPI endpoints and built-in ADK Dev UI at `/dev-ui/app=AutoYou_Agents`.
 *   Extensible Multi-Agent Architecture: Easily add new tools and specialized sub-agents.
 *   Cross-Platform, Offline-First: Designed to run locally on your machine with minimal setup.

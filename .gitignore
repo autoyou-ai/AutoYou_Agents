@@ -1,5 +1,8 @@
 # Environment variables
 .env
+.venv/
+.trae/
+.pytest_cache/
 
 # Database files
 *.db

@@ -81,23 +81,51 @@ def search_notes(query: str, limit: Optional[int] = 10) -> dict:
             "message": f"Failed to search notes: {str(e)}"
         }
 
-def list_notes(category: Optional[str] = None, limit: Optional[int] = 20) -> dict:
-    """List all notes, optionally filtered by category.
+def list_notes(category: Optional[str] = None, limit: Optional[int] = NotesTool.DEFAULT_LIST_LIMIT, 
+               created_after: Optional[str] = None, created_before: Optional[str] = None,
+               created_on: Optional[str] = None) -> dict:
+    """List all notes, optionally filtered by category and/or date.
     
     Args:
         category: Optional category to filter by
-        limit: Maximum number of notes to return (default: 20)
+        limit: Maximum number of notes to return (default: NotesTool.DEFAULT_LIST_LIMIT)
+        created_after: Show notes created after this date (YYYY-MM-DD or keywords like 'today')
+        created_before: Show notes created before this date (YYYY-MM-DD or keywords like 'today')
+        created_on: Show notes created on this specific date (YYYY-MM-DD or keywords like 'today')
         
     Returns:
         dict: List of notes
     """
     try:
-        results = notes_tool.list_notes(category=category, limit=limit or 20)
+        results = notes_tool.list_notes(
+            category=category, 
+            limit=limit,
+            created_after=created_after,
+            created_before=created_before,
+            created_on=created_on
+        )
+        
+        # Build filter description for response
+        filter_desc = []
+        if category:
+            filter_desc.append(f"category '{category}'")
+        if created_on:
+            filter_desc.append(f"created on {created_on}")
+        elif created_after or created_before:
+            if created_after and created_before:
+                filter_desc.append(f"created between {created_after} and {created_before}")
+            elif created_after:
+                filter_desc.append(f"created after {created_after}")
+            elif created_before:
+                filter_desc.append(f"created before {created_before}")
+        
+        filter_text = " with " + " and ".join(filter_desc) if filter_desc else ""
+        
         return {
             "status": "success",
             "notes": results,
             "count": len(results),
-            "message": f"Retrieved {len(results)} notes" + (f" in category '{category}'" if category else "")
+            "message": f"Retrieved {len(results)} notes{filter_text}"
         }
     except Exception as e:
         return {
